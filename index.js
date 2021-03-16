@@ -5,7 +5,8 @@ const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 const path = require("path");
 const { createServer } = require("http");
-const { auth } = require("express-openid-connect");
+const { auth, requiresAuth } = require("express-openid-connect");
+const axios = require("axios").default;
 
 const {
   checkUrl,
@@ -46,27 +47,26 @@ app.use(
  })
 );
 
-
-const expenses = [
-  {
-    date: new Date(),
-    description: "Pizza for a Coding Dojo session.",
-    value: 102,
-  },
-  {
-    date: new Date(),
-    description: "Coffee for a Coding Dojo session.",
-    value: 42,
-  },
-];
-
 app.get("/", async (req, res) => {
-  res.render("home", {
-    user: req.oidc && req.oidc.user,
-    total: expenses.reduce((accum, expense) => accum + expense.value, 0),
-    count: expenses.length,
-  });
+ try {
+   const summary = await axios.get(`${API_URL}/total`);
+   res.render("home", {
+     user: req.oidc && req.oidc.user,
+     total: summary.data.total,
+     count: summary.data.count,
+   });
+ } catch (err) {
+   next(err);
+ }
 });
+
+//app.get("/", async (req, res) => {
+  //res.render("home", {
+    //user: req.oidc && req.oidc.user,
+    //total: expenses.reduce((accum, expense) => accum + expense.value, 0),
+    //count: expenses.length,
+//  });
+//});
 
 // 👇 add requiresAuth middlware to these private routes  👇
 
@@ -78,13 +78,24 @@ app.get("/user", async (req, res) => {
     refresh_token: req.oidc && req.oidc.refreshToken,
   });
 });
+ app.get("/expenses", requiresAuth(), async (req, res, next) => {
+   try {
+     const expenses = await axios.get(`${API_URL}/reports`);
+     res.render("expenses", {
+       user: req.oidc && req.oidc.user,
+       expenses: expenses.data,
+     });
+   } catch (err) {
+     next(err);
+   }
+ });
 
-app.get("/expenses", async (req, res, next) => {
-  res.render("expenses", {
-    user: req.oidc && req.oidc.user,
-    expenses,
-  });
-});
+//app.get("/expenses", async (req, res, next) => {
+//  res.render("expenses", {
+//    user: req.oidc && req.oidc.user,
+//    expenses,
+//  });
+//});
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
