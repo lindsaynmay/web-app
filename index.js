@@ -37,23 +37,22 @@ app.use(
     saveUninitialized: true,
   })
 );
-
 app.use(
  auth({
    secret: SESSION_SECRET,
-    authRequired: false,
+   authRequired: false,
    auth0Logout: true,
    baseURL: APP_URL,
-     baseURL: APP_URL,
-   // 👇 add this 👇
-  authorizationParams: {
+   authorizationParams: {
      response_type: "code id_token",
      audience: "https://expenses-api",
+     // 👇 add this 👇
+     scope: "openid profile email read:reports",
+     // 👆 add this 👆
    },
-   // 👆 add this 👆
-
  })
 );
+
 
 app.get("/", async (req, res) => {
  try {
